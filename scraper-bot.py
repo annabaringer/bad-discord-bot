@@ -24,6 +24,9 @@ async def on_message(message):
 
     elif message.content.startswith('~'): # if it starts with ~, it's a command for bot
         cmd = message.content.split()[0].replace("~","")
+
+        if len(message.content.split()) > 1:
+            parameters = message.content.split()[1:]
             
         # commands for bot below this
 
@@ -31,7 +34,27 @@ async def on_message(message):
         if cmd == 'steal':
             data = pd.DataFrame(columns=['content', 'time', 'author'])
 
-            def is_command (msg): # Checking if the message is a command call
+            # ask for the number of messages to be scraped by the bot command
+            if (len(message.content.split()) > 1 and len(message.channel_mentions) == 0) or len(message.content.split()) > 2:
+                for parameter in parameters:
+                    if parameter == "help":
+                        answer = discord.Embed(title="command help",
+                                               description="""`~steal <number_of_messages>`\n\n`<number_of_messages>` : ** number of messages you wish to steal**""",
+                                               colour=0x1a7794) 
+                        await message.channel.send(embed=answer)
+                        return
+                    elif parameter[0] != "<": # channels are enveloped by "<>" as strings
+                        limit = int(parameter)
+            else:
+                limit = 100
+            
+            answer = discord.Embed(title="creating dataframe",
+                                   description="waiting?",
+                                   colour=0x1a7794) 
+
+            await message.channel.send(embed=answer)
+
+            def is_command (msg): # checking if the message is a command call
                 if len(msg.content) == 0:
                     return False
                 elif msg.content.split()[0] == '~steal':
@@ -39,16 +62,18 @@ async def on_message(message):
                 else:
                     return False
 
-            async for msg in message.channel.history(limit=100): # look at last x messages 
+            async for msg in message.channel.history(limit=limit): # look at last x messages 
                 if msg.author != client.user:
                     if not is_command(msg):
                         data = data.append({'content': msg.content,
                                     'time': msg.created_at,
                                     'author': msg.author.name}, ignore_index=True)
-                if len(data) == 100:
+                if len(data) == limit:
                     break
             print(data)
             data.to_csv("data.csv", index=False)
+
+            await message.channel.send('done!')
 
         # stop the program
         if cmd == 'killBot':
